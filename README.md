@@ -1,7 +1,3 @@
-### Part 1: The README.md
-
-Copy the code below into a file named `README.md` in your project folder.
-
 # 📉 Node.js Web Scraper & Price Tracker
 
 A fully automated bot that monitors product prices on e-commerce websites. It runs on a schedule, scrapes the latest price using a headless browser (Puppeteer), and sends an email notification via SMTP when the price drops below your target.
@@ -61,10 +57,6 @@ A fully automated bot that monitors product prices on e-commerce websites. It ru
 * **Bot Detection**: If a site blocks you, try increasing the timeout or rotating User-Agent strings.
 
 -----
-
-### Part 2: Additional URLs to Test
-
-Since Amazon is difficult (high security), here are three reliable websites to test your scraper skills. I have included the **CSS Selector** you need for each one.
 
 #### 1\. Quotes to Scrape (Text Scraping)
 
