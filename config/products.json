@@ -1,0 +1,24 @@
+[
+  {
+    "id": "book-1",
+    "name": "A Light in the Attic",
+    "url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+    "selector": ".price_color",
+    "targetPrice": 50.00,
+    "currency": "£",
+    "enabled": true,
+    "dropThreshold": 5,
+    "notifyOnLowestEver": true
+  },
+  {
+    "id": "book-2",
+    "name": "T-shirt",
+    "url": "https://books.toscrape.com/catalogue/the-orange-umbrella_1386/index.html",
+    "selector": ".price_color",
+    "targetPrice": 20.00,
+    "currency": "£",
+    "enabled": false,
+    "dropThreshold": 5,
+    "notifyOnLowestEver": false
+  }
+]

@@ -1,0 +1,36 @@
+{
+  "name": "nodejs-web-scraper-price-tracker",
+  "version": "1.0.0",
+  "description": "A fully automated bot that monitors product prices on e-commerce websites. It runs on a schedule, scrapes the latest price using a headless browser (Puppeteer), and sends an email notification via SMTP when the price drops below your target.",
+  "main": "debug.js",
+  "scripts": {
+    "start": "node tracker.js",
+    "tracker": "node tracker.js",
+    "dashboard": "node server.js",
+    "dev": "node tracker.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BryanC05/NodeJS-Web-Scraper-Price-Tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BryanC05/NodeJS-Web-Scraper-Price-Tracker/issues"
+  },
+  "homepage": "https://github.com/BryanC05/NodeJS-Web-Scraper-Price-Tracker#readme",
+  "dependencies": {
+    "axios": "^1.13.5",
+    "better-sqlite3": "^12.6.2",
+    "dotenv": "^17.3.1",
+    "ejs": "^4.0.1",
+    "express": "^5.2.1",
+    "jsdom": "^28.1.0",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.1",
+    "puppeteer": "^24.37.5",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}

@@ -1,88 +1,115 @@
-const puppeteer = require('puppeteer');
 const cron = require('node-cron');
-const nodemailer = require('nodemailer');
+const fs = require('fs');
 
-// --- CONFIGURATION ---
-// We use the HTTPS link that we know works
-const URL = 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'; 
+const ProductManager = require('./src/ProductManager');
+const PriceHistory = require('./src/PriceHistory');
+const Scraper = require('./src/Scraper');
+const NotificationService = require('./src/notifications/NotificationService');
 
-// The book is £51.77, so we set a higher threshold to trigger the alert immediately for testing
-const TARGET_PRICE = 60.00; 
+class PriceTracker {
+  constructor() {
+    this.settings = this.loadSettings();
+    this.productManager = new ProductManager('./config/products.json');
+    this.priceHistory = new PriceHistory(this.settings.database.path);
+    this.scraper = new Scraper(this.settings);
+    this.notifier = new NotificationService(this.settings.notifications);
+  }
 
-const CHECK_INTERVAL = '*/30 * * * *'; // Every 30 mins
+  loadSettings() {
+    const data = fs.readFileSync('./config/settings.json', 'utf8');
+    return JSON.parse(data);
+  }
 
-// --- EMAIL CONFIGURATION ---
-async function sendEmail(price) {
-    let testAccount = await nodemailer.createTestAccount();
-
-    let transporter = nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false, 
-        auth: {
-            user: testAccount.user, 
-            pass: testAccount.pass, 
-        },
-    });
-
-    let info = await transporter.sendMail({
-        from: '"Price Tracker" <tracker@example.com>',
-        to: "your_email@example.com",
-        subject: "🚨 Price Drop Alert!",
-        text: `The price is now ${price}! Buy it here: ${URL}`,
-    });
-
-    console.log("✅ Email sent! Preview URL: %s", nodemailer.getTestMessageUrl(info));
-}
-
-// --- SCRAPING LOGIC ---
-async function checkPrice() {
-    console.log('⏳ Checking price...');
-    
-    // Launch browser (headless: false so you can see it working)
-    const browser = await puppeteer.launch({ headless: false });
-    const page = await browser.newPage();
+  async checkProduct(product) {
+    console.log(`\n🔍 Checking: ${product.name}`);
+    console.log(`   URL: ${product.url}`);
 
     try {
-        await page.goto(URL, { waitUntil: 'networkidle2' });
+      const result = await this.scraper.scrape(product);
+      console.log(`   💰 Current Price: ${product.currency}${result.price.toFixed(2)}`);
 
-        // Selector for books.toscrape.com
-        const selector = '.price_color'; 
-        
-        await page.waitForSelector(selector);
+      this.priceHistory.record(product.id, result.price, product.currency);
+      const stats = this.priceHistory.getStats(product.id);
 
-        // Get the text (e.g., "£51.77")
-        let priceString = await page.evaluate((sel) => {
-            const element = document.querySelector(sel);
-            return element ? element.innerText : null;
-        }, selector);
+      console.log(`   📊 Previous: ${product.currency}${stats.previous?.toFixed(2) || 'N/A'}`);
+      console.log(`   📈 Change: ${stats.changePercent}%`);
+      console.log(`   📉 Lowest Ever: ${product.currency}${stats.lowest?.price?.toFixed(2) || 'N/A'}`);
 
-        if (!priceString) throw new Error("Could not find price element");
+      const shouldNotify = this.shouldNotify(product, result.price, stats);
+      
+      if (shouldNotify) {
+        console.log(`   🚨 Triggering notification!`);
+        await this.notifier.notify(product, result.price, stats);
+      } else {
+        console.log(`   ✓ No alert triggered`);
+      }
 
-        // Clean the data: Remove "£" and any other non-number characters
-        const price = parseFloat(priceString.replace(/[^0-9.]/g, ''));
-
-        console.log(`🔎 Found Price: ${price}`);
-
-        if (price < TARGET_PRICE) {
-            console.log("📉 It's cheap! Sending email...");
-            await sendEmail(price);
-        } else {
-            console.log("💰 Still too expensive.");
-        }
+      return { success: true, price: result.price, stats };
 
     } catch (error) {
-        console.error("❌ Error scraping:", error.message);
-    } finally {
-        await browser.close();
+      console.error(`   ❌ Error: ${error.message}`);
+      return { success: false, error: error.message };
     }
+  }
+
+  shouldNotify(product, currentPrice, stats) {
+    if (currentPrice < product.targetPrice) {
+      const dropPercent = Math.abs(stats.changePercent);
+      
+      if (dropPercent >= (product.dropThreshold || this.settings.alerting.dropThreshold)) {
+        return true;
+      }
+
+      if (product.notifyOnLowestEver && stats.isLowestEver) {
+        return true;
+      }
+    }
+
+    if (this.settings.alerting.notifyOnAnyChange && stats.previous && stats.changePercent !== 0) {
+      return true;
+    }
+
+    return false;
+  }
+
+  async checkAllProducts() {
+    const products = this.productManager.getEnabled();
+    console.log(`\n📦 Checking ${products.length} product(s)...\n`);
+
+    const results = await Promise.all(
+      products.map(product => this.checkProduct(product))
+    );
+
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+    
+    console.log(`\n✅ Completed: ${successful} success, ${failed} failed`);
+  }
+
+  start() {
+    console.log('🚀 Price Tracker Started');
+    console.log(`📅 Schedule: ${this.settings.scheduler.checkInterval}`);
+    console.log(`📦 Products: ${this.productManager.getEnabled().length} enabled\n`);
+
+    if (this.settings.scheduler.runOnStartup) {
+      this.checkAllProducts();
+    }
+
+    cron.schedule(this.settings.scheduler.checkInterval, () => {
+      this.checkAllProducts();
+    });
+  }
+
+  stop() {
+    this.priceHistory.close();
+  }
 }
 
-// --- SCHEDULER ---
-console.log("🚀 Price Tracker Started...");
-checkPrice(); // Run once immediately to test
+const tracker = new PriceTracker();
+tracker.start();
 
-// Schedule the job
-cron.schedule(CHECK_INTERVAL, () => {
-    checkPrice();
+process.on('SIGINT', () => {
+  console.log('\n👋 Shutting down...');
+  tracker.stop();
+  process.exit(0);
 });

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  tracker:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - NODE_ENV=production
+
+  dashboard:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    command: ["node", "server.js"]

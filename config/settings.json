@@ -1,0 +1,57 @@
+{
+  "scheduler": {
+    "checkInterval": "*/30 * * * *",
+    "runOnStartup": true
+  },
+  "browser": {
+    "headless": true,
+    "timeout": 30000,
+    "userAgentRotation": true,
+    "randomDelay": {
+      "enabled": true,
+      "minMs": 2000,
+      "maxMs": 5000
+    }
+  },
+  "proxy": {
+    "enabled": false,
+    "host": "",
+    "port": 0,
+    "username": "",
+    "password": ""
+  },
+  "notifications": {
+    "email": {
+      "enabled": true,
+      "provider": "ethereal",
+      "to": "your_email@example.com"
+    },
+    "discord": {
+      "enabled": false,
+      "webhookUrl": ""
+    },
+    "slack": {
+      "enabled": false,
+      "webhookUrl": ""
+    },
+    "telegram": {
+      "enabled": false,
+      "botToken": "",
+      "chatId": ""
+    }
+  },
+  "alerting": {
+    "dropThreshold": 5,
+    "notifyOnLowestEver": true,
+    "notifyOnAnyChange": false
+  },
+  "database": {
+    "path": "./data/prices.db"
+  },
+  "dashboard": {
+    "enabled": false,
+    "port": 3000,
+    "username": "admin",
+    "password": "change_me"
+  }
+}

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price Tracker Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📊 Price Tracker Dashboard</h1>
+      <div class="header-links">
+        <a href="/search" class="btn-search">🔍 Search Products</a>
+        <a href="/" class="btn-refresh">Refresh</a>
+      </div>
+    </header>
+
+    <div class="stats-summary">
+      <div class="stat-card">
+        <span class="stat-value"><%= products.length %></span>
+        <span class="stat-label">Total Products</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value"><%= products.filter(p => p.enabled).length %></span>
+        <span class="stat-label">Active</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value"><%= products.filter(p => p.currentPrice && p.currentPrice < p.targetPrice).length %></span>
+        <span class="stat-label">Below Target</span>
+      </div>
+    </div>
+
+    <div class="products-grid">
+      <% products.forEach(product => { %>
+        <div class="product-card <%= product.enabled ? '' : 'disabled' %>">
+          <div class="product-header">
+            <h3><%= product.name %></h3>
+            <span class="badge <%= product.enabled ? 'badge-active' : 'badge-inactive' %>">
+              <%= product.enabled ? 'Active' : 'Inactive' %>
+            </span>
+          </div>
+          
+          <div class="product-price">
+            <div class="current-price">
+              <%= product.currency %><%= product.currentPrice ? product.currentPrice.toFixed(2) : '—' %>
+            </div>
+            <div class="target-price">
+              Target: <%= product.currency %><%= product.targetPrice.toFixed(2) %>
+            </div>
+          </div>
+
+          <div class="product-stats">
+            <div class="stat">
+              <span class="label">Lowest</span>
+              <span class="value success"><%= product.currency %><%= product.lowestPrice ? product.lowestPrice.toFixed(2) : '—' %></span>
+            </div>
+            <div class="stat">
+              <span class="label">Highest</span>
+              <span class="value danger"><%= product.currency %><%= product.highestPrice ? product.highestPrice.toFixed(2) : '—' %></span>
+            </div>
+            <div class="stat">
+              <span class="label">Checks</span>
+              <span class="value"><%= product.totalChecks || 0 %></span>
+            </div>
+          </div>
+
+          <div class="product-status">
+            <% if (product.currentPrice && product.currentPrice < product.targetPrice) { %>
+              <span class="status success">✅ Below Target!</span>
+            <% } else if (product.currentPrice) { %>
+              <span class="status">Above Target</span>
+            <% } else { %>
+              <span class="status">Not Checked</span>
+            <% } %>
+          </div>
+
+          <div class="product-actions">
+            <a href="<%= product.url %>" target="_blank" class="btn btn-small">View</a>
+            <button class="btn btn-small btn-toggle" data-id="<%= product.id %>">
+              <%= product.enabled ? 'Disable' : 'Enable' %>
+            </button>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <div class="add-product-form">
+      <h2>➕ Add New Product</h2>
+      <form id="addProductForm">
+        <input type="text" name="id" placeholder="Product ID" required>
+        <input type="text" name="name" placeholder="Product Name" required>
+        <input type="url" name="url" placeholder="Product URL" required>
+        <input type="text" name="selector" placeholder="CSS Selector (e.g., .price_color)" required>
+        <input type="number" name="targetPrice" placeholder="Target Price" step="0.01" required>
+        <input type="text" name="currency" placeholder="Currency (e.g., $, £)" value="$">
+        <button type="submit" class="btn">Add Product</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      data.targetPrice = parseFloat(data.targetPrice);
+
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        location.reload();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + err.error);
+      }
+    });
+
+    document.querySelectorAll('.btn-toggle').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        await fetch(`/api/products/${id}/toggle`, { method: 'POST' });
+        location.reload();
+      });
+    });
+  </script>
+</body>
+</html>
